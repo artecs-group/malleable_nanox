@@ -1,0 +1,12 @@
+-I../
+-I../../
+-I../../../
+-I../../core
+-I../../arch
+-I../../arch/smp/
+-I../..//arch/unix-os/
+-I../../support/
+-I../../utils/
+-I../../../../../super-scheduler/client/include/
+-I../../../../../super-scheduler/
+

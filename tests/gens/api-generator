@@ -1,0 +1,90 @@
+#!/bin/bash
+
+# Transforms a text so that it is valid
+# to be used as a shell variable name
+# Note: it actually calls tr (translate)
+# and translates every alphanumeric character
+# into an underscore
+function tr_sh() {
+  echo $(echo -n "$@" | tr -c [:alnum:] '_')
+}
+
+common_includes="\
+-I/homelocal/lcostero_local/odroid/REDO_volta/ompss_20162003/nanox_nuevo/src/core \
+-I/homelocal/lcostero_local/odroid/REDO_volta/ompss_20162003/nanox_nuevo/src/support \
+-I/homelocal/lcostero_local/odroid/REDO_volta/ompss_20162003/nanox_nuevo/src/apis/c \
+-I/homelocal/lcostero_local/odroid/REDO_volta/ompss_20162003/nanox_nuevo/src/apis/c \
+$END"
+
+LIBS="-Xlinker --no-as-needed -lnanox-ompss -lnanox -lnanox-c -Xlinker --as-needed "
+
+# debug_CPPFLAGS="-DNANOS_DEBUG_ENABLED ${common_includes}  "
+# debug_CXXFLAGS="-O0 -g2 -fno-inline -DVOLTA1"
+# debug_CFLAGS="-O0 -g2 -fno-inline -DVOLTA1"
+# debug_LDFLAGS="-lcpufreq  "
+# debug_LIBS=$LIBS
+
+# instrumentation_CPPFLAGS="-DNANOS_INSTRUMENTATION_ENABLED ${common_includes}  "
+# instrumentation_CXXFLAGS="-O3 -DVOLTA1"
+# instrumentation_CFLAGS="-O3 -DVOLTA1"
+# instrumentation_LDFLAGS="-lcpufreq  "
+# instrumentation_LIBS=$LIBS
+
+# instrumentation_debug_CPPFLAGS="-DNANOS_DEBUG_ENABLED -DNANOS_INSTRUMENTATION_ENABLED ${common_includes}  "
+# instrumentation_debug_CXXFLAGS="-O0 -g2 -fno-inline -DVOLTA1"
+# instrumentation_debug_CFLAGS="-O0 -g2 -fno-inline -DVOLTA1"
+# instrumentation_debug_LDFLAGS="-lcpufreq  "
+# instrumentation_debug_LIBS=$LIBS
+
+ performance_CPPFLAGS=" ${common_includes}  "
+ performance_CXXFLAGS="-O3 -DVOLTA1"
+ performance_CFLAGS="-O3 -DVOLTA1"
+ performance_LDFLAGS="-lcpufreq  "
+ performance_LIBS=$LIBS
+
+# Common to all versions
+cat << EOF
+test_CC="gcc"
+test_CXX="g++"
+EOF
+
+# Specific to each version
+compile_versions=
+for version in performance ; do
+  sh_version=$(tr_sh $version)
+  compile_versions+="${sh_version} "
+  for libdir in plugins pms arch/unix-os arch/smp core pms apis; do
+    library_dir=/homelocal/lcostero_local/odroid/REDO_volta/ompss_20162003/nanox_nuevo/src/${libdir}/${version}/.libs
+    eval "${sh_version}_LDFLAGS=\"\
+-L${library_dir} -Wl,-rpath,${library_dir} \
+\${${sh_version}_LDFLAGS}\""
+
+    eval "${sh_version}_LD_LIBRARY_PATH=\"\
+${library_dir}\
+\${${sh_version}_LD_LIBRARY_PATH+:}\
+\${${sh_version}_LD_LIBRARY_PATH}\""
+  done
+
+  eval "${sh_version}_LDFLAGS=\"\
+ \
+\${${sh_version}_LIBS} \
+\${${sh_version}_LDFLAGS}\""
+
+  eval "${sh_version}_ENV=\"
+LD_LIBRARY_PATH=\${${sh_version}_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH}\""
+
+  cat << EOF
+test_CPPFLAGS_${sh_version}="$(eval echo \${${sh_version}_CPPFLAGS} ${test_CPPFLAGS} )"
+test_CFLAGS_${sh_version}="$(eval echo \${${sh_version}_CFLAGS} ${test_CFLAGS} -Wno-error )"
+test_CXXFLAGS_${sh_version}="$(eval echo \${${sh_version}_CXXFLAGS} ${test_CXXFLAGS} -Wno-error )"
+test_LDFLAGS_${sh_version}="$(eval echo \${${sh_version}_LDFLAGS} \${${sh_version}_LIBS} ${test_LDFLAGS})"
+test_PLUGINS_${sh_version}="$(eval echo \${${sh_version}_PLUGINS})"
+test_ENV_${sh_version}="$(eval echo \${${sh_version}_ENV} ${test_ENV})"
+EOF
+
+done # for version
+
+cat << EOF
+compile_versions="${compile_versions}"
+$(/homelocal/lcostero_local/odroid/REDO_volta/ompss_20162003/nanox_nuevo/tests/gens/config.py $*)
+EOF

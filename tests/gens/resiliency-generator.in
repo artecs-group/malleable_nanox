@@ -1,0 +1,15 @@
+#!/bin/bash
+path=$(dirname $0)
+
+if [ x@enable_resiliency@ = xyes ]; then
+
+$( ${path}/core-generator )
+
+else #no resiliency
+
+cat <<EOF
+test_ignore=yes
+EOF
+
+fi
+
